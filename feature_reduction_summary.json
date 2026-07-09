@@ -1,0 +1,20 @@
+{
+  "sets": {
+    "F0_full": 86,
+    "F1_no_invariant": 83,
+    "F2_no_dead": 64,
+    "F3_wind_repr": 55,
+    "F4_drop_pc": 54
+  },
+  "total_2024": {
+    "F0_full": 0.6008,
+    "F1_no_invariant": 0.5991,
+    "F2_no_dead": 0.5947,
+    "F3_wind_repr": 0.5956,
+    "F4_drop_pc": 0.5947
+  },
+  "best": "F0_full",
+  "lean_choice": "F1_no_invariant",
+  "lean_nfeat": 83,
+  "recommend": "F1_no_invariant 채택 (총점 유지하며 3개 감소)"
+}

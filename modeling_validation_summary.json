@@ -1,0 +1,33 @@
+{
+  "holdout_nmae_valid": {
+    "1": {
+      "M0_raw": 12.7093,
+      "M1_physics": 12.6627,
+      "M2_powercurve": 12.5699,
+      "M3_pooled": 12.5196
+    },
+    "2": {
+      "M0_raw": 12.671,
+      "M1_physics": 12.6264,
+      "M2_powercurve": 12.6269,
+      "M3_pooled": 12.7832
+    },
+    "3": {
+      "M0_raw": 15.2319,
+      "M1_physics": 15.0994,
+      "M2_powercurve": 15.0512,
+      "M3_pooled": 14.1849
+    }
+  },
+  "best_model_per_group": {
+    "1": "M3_pooled",
+    "2": "M1_physics",
+    "3": "M3_pooled"
+  },
+  "selected_nmae": {
+    "1": 12.5196,
+    "2": 12.6264,
+    "3": 14.1849
+  },
+  "mean_selected_nmae": 13.1103
+}

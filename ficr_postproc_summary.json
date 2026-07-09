@@ -1,0 +1,16 @@
+{
+  "score_weight": "0.5*(1-NMAE)+0.5*FICR",
+  "metric": "official_metric.py (발전량가중 2티어)",
+  "chosen_post": {
+    "1": "P5_debias_nudge",
+    "2": "P1_debias",
+    "3": "P5_debias_nudge"
+  },
+  "baseline_total": 0.6008,
+  "baseline_1mNMAE": 0.866,
+  "baseline_FICR": 0.3357,
+  "post_total": 0.6245,
+  "post_1mNMAE": 0.8636,
+  "post_FICR": 0.3853,
+  "delta_total": 0.0236
+}
