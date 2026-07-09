@@ -11,14 +11,16 @@
 
 2024 holdout(자가검증) 공식 총점 궤적:
 
-| 단계 | 총점 | 무엇을 더했나 | 근거 파일 |
-|---|---:|---|---|
-| GBM 기준선 (86 feats) | 0.6008 | LightGBM + 물리 파생 + 파워커브 | `modeling_validation_summary.json` |
-| v2 | 0.6013 | 격자 공간 feature + 감률, 변수 86→65 | `v2_summary.json` |
-| v2 + FICR 후처리 | 0.6266 | debias + FICR nudge | `v2_summary.json` |
-| v3 | 0.6383 | + MLP 블렌드 (50:50) | `v3_summary.json` |
-| v4 | 0.6463 | MLP random search 튜닝 (w=0.6) | `v4_summary.json` |
-| **v5 (권장)** | **0.6461** | MLP **시드 5개 앙상블** (w=0.7) | `v5_summary.json` |
+| 단계 | 총점 | 무엇을 더했나 |
+|---|---:|---|
+| GBM 기준선 (86 feats) | 0.6008 | LightGBM + 물리 파생 + 파워커브 |
+| v2 | 0.6013 | 격자 공간 feature + 감률, 변수 86→65 |
+| v2 + FICR 후처리 | 0.6266 | debias + FICR nudge |
+| v3 | 0.6383 | + MLP 블렌드 (50:50) |
+| v4 | 0.6463 | MLP random search 튜닝 (w=0.6) |
+| **v5 (권장)** | **0.6461** | MLP **시드 5개 앙상블** (w=0.7) |
+
+(단계별 정량 로그 `*_summary.json`과 실험 노트북은 로컬 전용 — git 미추적)
 
 **최종 제출 후보** (제출 순서 권장: v5 → v4):
 
@@ -58,7 +60,7 @@ Python 3.11 + [uv](https://docs.astral.sh/uv/).
 uv sync                                    # 의존성 설치 (.venv)
 # 노트북 실행 (torch를 쓰는 노트북은 --with torch + OMP 가드)
 OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
-  jupyter nbconvert --to notebook --execute --inplace MODELING_SEED_ENS_FINAL.ipynb
+  jupyter nbconvert --to notebook --execute --inplace PIPELINE_FINAL.ipynb
 ```
 
 ⚠️ **macOS 필수 주의 — torch + LightGBM 세그폴트**: `import torch` 후 `lightgbm.fit()`을 같은 프로세스에서 호출하면 libomp 중복 로드로 segfault(exit 139)가 난다. 해당 노트북들은 첫 셀에서 다음 3종 가드를 건다 (절대 제거 금지):
@@ -66,14 +68,16 @@ OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
 
 ## 5. Repo 구조
 
-### 공유 모듈
+### 추적되는 핵심 파일
 | 파일 | 역할 |
 |---|---|
+| **`PIPELINE_FINAL.ipynb`** | **최종 v5 파이프라인 end-to-end 재현 (유일하게 추적되는 노트북)** |
 | `wind_lib.py` | 로더·물리 파생·파워커브·유효구간 NMAE·spatial v2 조인·lean feature 세트·HMM(기각됨) |
 | `official_metric.py` | 대회 공식 채점 코드 (총점/1-NMAE/FICR) |
 | `scripts/build_spatial_v2.py` | 원본 CSV → spatial_v2 parquet 생성 |
+| `submission_v5.csv` / `submission_v4.csv` | 최종 제출 후보 (그 외 제출·summary JSON은 미추적) |
 
-### 노트북 (작업 흐름 순)
+### 실험 노트북 (로컬 전용, git 미추적 — 실험 이력 기록)
 | 순서 | 노트북 | 내용 | 결론 |
 |---|---|---|---|
 | 1 | `EDA_MAIN.ipynb` | 분포·상관·VIF·파워커브 EDA | 풍속이 지배변수, 트리모델 적합 |
@@ -100,7 +104,7 @@ OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
 | `document/research_conditioning_layers_2026-07-08.md` | 조건화 계층(FiLM/AdaLN) 리서치 |
 | `claudedocs/research_nwp_features_2026-07-09.md` | NWP feature 근거 리서치 (격자 ★★★·감률 ★★☆·500hPa 제외) |
 
-실험별 정량 결과는 `*_summary.json` (11개)에 기록.
+실험별 정량 결과는 `*_summary.json`(로컬 전용)에 기록되어 있으며, 핵심 수치는 이 README의 §1·§8 표에 옮겨져 있다.
 
 ## 6. 최종 파이프라인 (v5)
 
@@ -131,15 +135,17 @@ feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
 |---|---|---|
 | 격자 공간 feature (9+16격자 통계·gradient) | ✅ 채택 | 문헌(Andrade & Bessa 2017, −12.85%)과 방향 일치, CV 두 해 모두 우위 |
 | 기온 감률 2종 (안정도) | ✅ 채택 | feature 중요도 전체 4·5위 |
-| 변수 축소 86→65 | ✅ 채택 | 축소분(−31)이 죽은 변수임을 CV로 확인 (`feature_reduction_summary.json`) |
-| MLP 블렌드 | ✅ 채택 | 20 trial 중 17개가 두 해 모두 GBM 우위 (`mlp_ablation_summary.json`) |
-| FICR 후처리 (debias+nudge) | ✅ 채택 | 총점 +0.025~0.036 (`ficr_postproc_summary.json`) |
+| 변수 축소 86→65 | ✅ 채택 | 축소분(−31)이 죽은 변수임을 CV로 확인 |
+| MLP 블렌드 | ✅ 채택 | 20 trial 중 17개가 두 해 모두 GBM 우위 |
+| FICR 후처리 (debias+nudge) | ✅ 채택 | 총점 +0.025~0.036 |
 | 시드 앙상블 | ✅ 채택(v5) | 단일시드 CV는 시드운 포함 낙관치 — 앙상블이 실전 기대값 우위 |
-| HistGBM 단순 추가 | △ 유지 | 이득 미미하나 전 폴드 일관 (−0.02~−0.06%p) (`cv_ablation_summary.json`) |
-| GRU 잔차보정 | ❌ 기각 | +0.55~0.74%p **악화** — 시퀀스 1,400개는 부족 (`advanced_ablation_summary.json`) |
-| HMM 국면(regime) feature | ❌ 기각 | 폴드 간 부호 뒤집힘 = 노이즈 (`cv_ablation_summary.json`) |
-| FiLM / 계층 헤드 조건화 | ❌ 기각 | 두 해 모두 concat 임베딩에 패배 (`film_ablation_summary.json`) |
+| HistGBM 단순 추가 | △ 유지 | 이득 미미하나 전 폴드 일관 (−0.02~−0.06%p) |
+| GRU 잔차보정 | ❌ 기각 | +0.55~0.74%p **악화** — 시퀀스 1,400개는 부족 |
+| HMM 국면(regime) feature | ❌ 기각 | 폴드 간 부호 뒤집힘 = 노이즈 |
+| FiLM / 계층 헤드 조건화 | ❌ 기각 | 두 해 모두 concat 임베딩에 패배 |
 | MOS(NWP 보정) | ❌ 미사용 | 규칙 해석 리스크 + GBM이 흡수 (팀 결정, CONSTRAINTS §3) |
+
+(각 판정의 상세 수치는 로컬 `*_summary.json`·실험 노트북에 기록)
 
 > 교훈: 이 데이터 규모(그룹당 1.7~2.6만 행)에서는 **단순한 것(물리 feature·격자 통계·소형 MLP·후처리)이 이기고, 구조적 복잡성(GRU·FiLM·attention류)은 일관되게 진다.**
 
@@ -153,7 +159,7 @@ uv sync
 uv run python scripts/build_spatial_v2.py
 # 4. 최종 제출 재현 → submission_v5.csv
 OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
-  jupyter nbconvert --to notebook --execute --inplace MODELING_SEED_ENS_FINAL.ipynb
+  jupyter nbconvert --to notebook --execute --inplace PIPELINE_FINAL.ipynb
 ```
 
 ## 10. 남은 작업

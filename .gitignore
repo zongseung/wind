@@ -11,3 +11,11 @@ wheels/
 
 # Tool caches
 .uv-cache/
+
+# 실험 노트북·산출물은 로컬 전용 (최종 파이프라인·최종 제출만 추적)
+*.ipynb
+!PIPELINE_FINAL.ipynb
+submission_*.csv
+!submission_v4.csv
+!submission_v5.csv
+*_summary.json
