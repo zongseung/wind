@@ -152,6 +152,38 @@ def lean_features(cols, include_pc=True):
     return out
 
 
+# ── v9: 시간 이웃 NWP feature (같은 예보 배치 내 lag/lead — 누설·타이밍 안전) ──
+# 배치 = 전일 13시 공개된 01:00~24:00 24시간. 배치 경계를 넘는 lead는 미래 배치
+# (더 늦게 공개) 참조라 금지 → 경계에서는 자기값으로 채움.
+TEMPORAL_BASE = ["gfs_wind_speed_100m_mean", "ldaps_wind_speed_10m_mean"]
+TEMPORAL_COLS = [
+    "tmp_gfs_lag1", "tmp_gfs_lead1", "tmp_gfs_lag3", "tmp_gfs_lead3",
+    "tmp_gfs_bmean", "tmp_gfs_bstd", "tmp_gfs_anom", "tmp_gfs_trend",
+    "tmp_ldaps_lag1", "tmp_ldaps_lead1", "tmp_ldaps_bmean", "tmp_ldaps_anom"]
+
+
+def add_temporal(fr):
+    """같은 예보 배치 내 시간 이웃 feature. NWP 타이밍 오차(전선 지연 등) 평활·추세."""
+    fr = fr.sort_values("kst_dtm").reset_index(drop=True).copy()
+    batch = (fr["kst_dtm"] - pd.Timedelta(hours=1)).dt.floor("D")
+    for c, pre in [(TEMPORAL_BASE[0], "gfs"), (TEMPORAL_BASE[1], "ldaps")]:
+        g = fr.groupby(batch)[c]
+        fr[f"tmp_{pre}_lag1"] = g.shift(1).fillna(fr[c])
+        fr[f"tmp_{pre}_lead1"] = g.shift(-1).fillna(fr[c])
+        if pre == "gfs":
+            fr[f"tmp_{pre}_lag3"] = g.shift(3).fillna(fr[c])
+            fr[f"tmp_{pre}_lead3"] = g.shift(-3).fillna(fr[c])
+        bm = g.transform("mean")
+        fr[f"tmp_{pre}_bmean"] = bm
+        if pre == "gfs":
+            fr[f"tmp_{pre}_bstd"] = g.transform("std").fillna(0.0)
+        fr[f"tmp_{pre}_anom"] = fr[c] - bm
+        if pre == "gfs":
+            fr[f"tmp_{pre}_trend"] = fr[f"tmp_{pre}_lead1"] - fr[f"tmp_{pre}_lag1"]
+    assert fr[TEMPORAL_COLS].notna().all().all()
+    return fr
+
+
 # ── NWP-only HMM 국면(regime) ─────────────────────────────────────────────
 # 규칙(research 문서 §0): regime은 반드시 NWP 파생 변수로만 정의. 실측 발전량 사용 금지.
 REGIME_VARS = ["hub_v", "shear_gfs", "alpha_gfs", "gust_ratio", "air_density",
