@@ -20,15 +20,16 @@
 | v4 | 0.6463 | MLP random search 튜닝 (w=0.6) |
 | v5 | 0.6461 | MLP **시드 5개 앙상블** (w=0.7) — **실제 제출: LB 0.61206** |
 | v6 | 0.6273* | 후처리를 **보수적 nudge(P3c)** 로 교체 — **실제 제출: LB 0.6292 (212위)**, holdout↔LB 편차 +0.002로 캘리브레이션 확립 |
-| **v7 (권장)** | **0.6351** | + **SCADA 라벨정제**(stuck 시간 가중 0.5, 2폴드 +0.008~0.011) + **GBM 튜닝**(lr0.021·트리2000, +0.003~0.004). LB 기대 ≈ 0.637 |
+| v7 | 0.6351 | + **SCADA 라벨정제**(stuck 가중 0.5) + **GBM 튜닝** — **실제 제출: LB 0.63497 (139위)**, 캘리브레이션 재확인(편차 −0.0001) |
+| **v8 (권장)** | **0.6438** | + **FICR-정렬 손실 가중**(w×=(1+α·y/cap), α=5; 2폴드 단조 개선) + 시드 10. LB 기대 ≈ 0.644 |
 
 (*v6 holdout이 v5보다 낮은 건 정상 — v5의 홀드아웃 0.6461은 2024에 과적합된 낙관치였음이 실전에서 판명. 단계별 정량 로그 `*_summary.json`·실험 노트북은 로컬 전용)
 
 **⚠️ v5 실전 결과와 교훈 (2026-07-11)**: v5 제출 → **LB 0.61206** (1-NMAE 0.85656, FICR 0.36756). 홀드아웃 대비 −0.034 하락. 원인 확정(로컬 `DIAGNOSIS_LB.ipynb`): 후처리(debias+nudge scale≤1.15)를 **2024 holdout 한 해만 보고 선택**한 것이 연도 과적합 — 같은 후처리가 2023 폴드에선 총점을 −0.07 붕괴시키는 도박이었음(예측을 실측 32%인데 47~50%로 상향). 모델 자체(GBM⊕MLP)의 원본 예측은 잘 캘리브레이션돼 있었고, CatBoost 추가·교체는 이득 없음(Δ≈0).
 
-**최종 제출 후보**: **`submission_v6.csv`** — v5와 동일 모델 + 보수적 nudge(scale≤1.05·shift≤2%, debias 제거). 두 폴드 모두에서 무처리·debias·기존 nudge를 이기는 worst-year 최강(2023=0.6125/2024=0.6294). `submission_v5.csv`(LB 0.612 실측)·`submission_v4.csv`는 비교 기준용.
+**최종 제출 후보**: **`submission_v8.csv`** (LB 기대 ≈ 0.644). 이전 제출 v5/v6/v7은 LB 실측치가 있는 비교 기준.
 
-참고: 리더보드 1등 0.669(연식2), 상위권 1-NMAE ~0.87 포화 → **순위는 FICR에서 갈린다**. 우리 팀("뭐하지") v5 시점 328위/1,332팀.
+참고: 리더보드 1등 0.669, 상위권 1-NMAE ~0.87 포화 → **순위는 FICR에서 갈린다**. 우리 팀 "짱씅": v5 328위 → v6 212위 → v7 139위 (1,332팀).
 
 ## 2. 평가 지표
 
@@ -72,11 +73,11 @@ OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
 ### 추적되는 핵심 파일
 | 파일 | 역할 |
 |---|---|
-| **`PIPELINE_FINAL.ipynb`** | **최종 v5 파이프라인 end-to-end 재현 (유일하게 추적되는 노트북)** |
+| **`PIPELINE_FINAL.ipynb`** | **최종(현재 v8) 파이프라인 end-to-end 재현 (유일하게 추적되는 노트북)** |
 | `wind_lib.py` | 로더·물리 파생·파워커브·유효구간 NMAE·spatial v2 조인·lean feature 세트·HMM(기각됨) |
 | `official_metric.py` | 대회 공식 채점 코드 (총점/1-NMAE/FICR) |
 | `scripts/build_spatial_v2.py` | 원본 CSV → spatial_v2 parquet 생성 |
-| `submission_v5.csv` / `submission_v4.csv` | 최종 제출 후보 (그 외 제출·summary JSON은 미추적) |
+| `submission_v4~v8.csv` | 제출 이력·후보 (그 외 산출물은 미추적) |
 
 ### 실험 노트북 (로컬 전용, git 미추적 — 실험 이력 기록)
 | 순서 | 노트북 | 내용 | 결론 |
@@ -107,7 +108,7 @@ OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
 
 실험별 정량 결과는 `*_summary.json`(로컬 전용)에 기록되어 있으며, 핵심 수치는 이 README의 §1·§8 표에 옮겨져 있다.
 
-## 6. 최종 파이프라인 (v5)
+## 6. 최종 파이프라인 (v8)
 
 ```
 feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
@@ -115,12 +116,12 @@ feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
              + 파워커브 pc_pred_cf (isotonic, 학습구간 fit)
              + 격자 공간 mean/std/gradient 8개 + 감률 2개   ← wind_lib.lean_features() + SPATIAL_COLS
 
-모델 = 0.3 × GBM(LightGBM+HistGBM 평균, MAE 손실)
-     + 0.7 × MLP(256×3 GELU, 그룹 concat 임베딩, 3그룹 pooled, L1, 시드 5개 평균, MPS)
+학습 가중 = stuck(SCADA 식별 고장·제한 시간 0.5) × FICR-정렬 (1 + 5·y/용량)
 
-후처리(그룹별, 학습기간 OOF로만 fit) = 조건부 debias(리드타임×풍속분위 잔차 차감)
-                                    → FICR nudge(공식 FICR 최대화 scale/shift)
-                                    → [0, 설비용량] 클리핑
+모델 = 0.3 × GBM(튜닝 LightGBM + HistGBM 평균, MAE 손실, 가중)
+     + 0.7 × MLP(256×3 GELU, 그룹 concat 임베딩, 3그룹 pooled, 가중 L1, 시드 10 평균, MPS)
+
+후처리(그룹별, 학습기간 OOF로만 fit) = 보수적 nudge(scale≤1.05·shift≤2%) → [0, 설비용량] 클리핑
 ```
 
 ## 7. 검증 규율 & 누설 방지
@@ -143,6 +144,9 @@ feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
 | 구간별 nudge / quantile FICR-지향 점추정 | ❌ 기각 | 연도 부호 뒤집힘 / 두 해 모두 악화 — 후처리 레버 소진 확인 |
 | **SCADA 라벨 정제** (stuck 시간 가중 0.5) | ✅ 채택(v7) | 두 폴드 +0.008~0.011 — 전 변형이 두 해 모두 우위(`scada_clean_result.json`). g1/g2의 18%가 stuck |
 | **GBM 하이퍼파라미터 튜닝** (lr0.021·트리2000·mcs300) | ✅ 채택(v7) | 두 폴드 +0.003~0.004 (`gbm_hpo_result.json`) |
+| **FICR-정렬 손실 가중** (α=5) | ✅ 채택(v8) | α {0→5} 두 폴드 단조 개선, raw +0.010~0.015 (`ficrw_result.json`, `final_alpha.json`) |
+| SCADA 임계·가중 미세화 / 블렌드 재스캔 | ❌ 기각 | v7 설정이 평탄 최적점 (`tune2_result.json`) |
+| MLP 재튜닝(α 가중 하) | ❌ 기각 | 12 trial 전패 — 현행 설정 유지 |
 | CatBoost 추가/교체 | ❌ 기각 | 두 해 모두 Δ≈0 — GBM 계열 내 교체는 무효 |
 | 시드 앙상블 | ✅ 채택(v5) | 단일시드 CV는 시드운 포함 낙관치 — 앙상블이 실전 기대값 우위 |
 | HistGBM 단순 추가 | △ 유지 | 이득 미미하나 전 폴드 일관 (−0.02~−0.06%p) |
