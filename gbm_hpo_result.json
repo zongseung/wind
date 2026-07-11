@@ -1,0 +1,26 @@
+{
+  "adopted_trial": 7,
+  "params": {
+    "objective": "mae",
+    "n_estimators": 2000,
+    "learning_rate": 0.020651822836313095,
+    "num_leaves": 63,
+    "min_child_samples": 300,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.5,
+    "reg_lambda": 0.1,
+    "random_state": 42,
+    "verbose": -1
+  },
+  "totals": {
+    "base": {
+      "2023": 0.5886,
+      "2024": 0.6008
+    },
+    "best": {
+      "2023": 0.5918,
+      "2024": 0.6049
+    }
+  }
+}

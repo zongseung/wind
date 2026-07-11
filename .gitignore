@@ -19,5 +19,6 @@ submission_*.csv
 !submission_v4.csv
 !submission_v5.csv
 !submission_v6.csv
+!submission_v7.csv
 *_summary.json
 catboost_info/
