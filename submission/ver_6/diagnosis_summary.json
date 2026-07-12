@@ -1,0 +1,86 @@
+{
+  "postproc_totals": {
+    "P0_none": {
+      "2023": 0.5992,
+      "2024": 0.6079
+    },
+    "P1_debias": {
+      "2023": 0.601,
+      "2024": 0.6006
+    },
+    "P3_nudge": {
+      "2023": 0.5972,
+      "2024": 0.6457
+    },
+    "P3c_nudge_cons": {
+      "2023": 0.6125,
+      "2024": 0.6294
+    },
+    "P5_deb_nudge": {
+      "2023": 0.5296,
+      "2024": 0.6448
+    },
+    "P5c_deb_nudge_cons": {
+      "2023": 0.5811,
+      "2024": 0.6276
+    }
+  },
+  "robust_choice": "P3c_nudge_cons",
+  "old_choice_2024_only": "P3_nudge",
+  "bias": [
+    {
+      "fold": 2023,
+      "group": 1,
+      "actual_cf": 32.41,
+      "raw_cf": 29.73,
+      "nudged_cf": 46.96,
+      "cons_cf": 39.61,
+      "nudge_scale": 1.15,
+      "cons_scale": 1.04
+    },
+    {
+      "fold": 2023,
+      "group": 2,
+      "actual_cf": 33.45,
+      "raw_cf": 34.56,
+      "nudged_cf": 50.52,
+      "cons_cf": 46.08,
+      "nudge_scale": 1.09,
+      "cons_scale": 1.05
+    },
+    {
+      "fold": 2024,
+      "group": 1,
+      "actual_cf": 29.18,
+      "raw_cf": 28.12,
+      "nudged_cf": 34.79,
+      "cons_cf": 31.69,
+      "nudge_scale": 1.02,
+      "cons_scale": 1.05
+    },
+    {
+      "fold": 2024,
+      "group": 2,
+      "actual_cf": 30.04,
+      "raw_cf": 30.95,
+      "nudged_cf": 36.16,
+      "cons_cf": 33.84,
+      "nudge_scale": 0.98,
+      "cons_scale": 1.04
+    },
+    {
+      "fold": 2024,
+      "group": 3,
+      "actual_cf": 26.13,
+      "raw_cf": 24.98,
+      "nudged_cf": 34.07,
+      "cons_cf": 28.18,
+      "nudge_scale": 1.15,
+      "cons_scale": 1.03
+    }
+  ],
+  "catboost_delta_by_fold": {
+    "2023": -0.0001,
+    "2024": -0.0019
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "winner_feature_set": "C_v2_65",
+  "n_features": 65,
+  "cv_total_2024": {
+    "A_full86": 0.6008,
+    "B_lean55": 0.5956,
+    "C_v2_65": 0.6013
+  },
+  "chosen_post": {
+    "1": "P5_deb_nudge",
+    "2": "P3_nudge",
+    "3": "P5_deb_nudge"
+  },
+  "total_2024_base": 0.6013,
+  "total_2024_post": 0.6266,
+  "one_minus_nmae_post": 0.8605,
+  "ficr_post": 0.3928
+}

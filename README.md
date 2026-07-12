@@ -22,17 +22,25 @@
 | v6 | 0.6273* | 후처리를 **보수적 nudge(P3c)** 로 교체 — **실제 제출: LB 0.6292 (212위)**, holdout↔LB 편차 +0.002로 캘리브레이션 확립 |
 | v7 | 0.6351 | + **SCADA 라벨정제**(stuck 가중 0.5) + **GBM 튜닝** — **실제 제출: LB 0.63497 (139위)**, 캘리브레이션 재확인(편차 −0.0001) |
 | v8 | 0.6438 | + FICR-정렬 손실 가중(α=5) + 시드 10 — **실제 제출: LB 0.62614 ❌ 실패**. 상향 편향(평균 예측 CF 41~43%)이 2025에서 처벌됨 — 2폴드 통과에도 LB 기각 |
-| v9 | 0.6364 | v7 구성 그대로 + 시드 10 (α 없음, 편향 프로파일 v7과 동일). holdout +0.0013 — 미세·무위험 후보 |
+| v9 | 0.6364 | v7 구성 + 시드 10 — **실제 제출: LB 0.63157** (1-nMAE 0.86958, FiCR 0.39356), 평균 확대 실패 |
+| v10 | 0.6370 | v7 구조 고정 + OOF forecast-combination — **실제 제출: LB 0.63158** (1-nMAE 0.87056, FiCR 0.39260), v9와 사실상 동일 |
+| v11 | 0.6395 | 평가 제외 행(`y<10%`)을 GBM 학습에서도 제외 + 기존 MLP 유지. 2023/2024 raw 모두 개선, 그룹별 LB probe 대기 |
+| v12 | **0.6410** | v11 + 수정된 공식 기대효용 argmax — **실제 제출: LB 0.63858 (95위)**, 1-nMAE 0.87309·FiCR 0.40408 |
+| v13 | **0.6418** | v12의 그룹3 LightGBM만 엄격 검증된 pooled LightGBM으로 교체 — **제출 전 후보**, 2024 v12 대비 +0.00089 |
+| v14 | **0.6433** | 그룹3의 약한 HistGBM도 제거해 pooled LightGBM 40% + MLP 60% — **새 제출 후보**, v12 대비 +0.00239 |
+| v16 | **0.6442 환산** | 그룹3 LightGBM 비중을 날씨별 25~55%로 정하는 제한형 gate — **새 제출 후보**, v14 대비 +0.00088 |
 
-(*v6 holdout이 v5보다 낮은 건 정상 — v5의 홀드아웃 0.6461은 2024에 과적합된 낙관치였음이 실전에서 판명. 단계별 정량 로그 `*_summary.json`·실험 노트북은 로컬 전용)
+(*v6 holdout이 v5보다 낮은 건 정상 — v5의 홀드아웃 0.6461은 2024에 과적합된 낙관치였음이 실전에서 판명. 단계별 정량 로그와 노트북은 각 `submission/ver_{num}` 폴더에 보존)
 
 **⚠️ v5 실전 결과와 교훈 (2026-07-11)**: v5 제출 → **LB 0.61206** (1-NMAE 0.85656, FICR 0.36756). 홀드아웃 대비 −0.034 하락. 원인 확정(로컬 `DIAGNOSIS_LB.ipynb`): 후처리(debias+nudge scale≤1.15)를 **2024 holdout 한 해만 보고 선택**한 것이 연도 과적합 — 같은 후처리가 2023 폴드에선 총점을 −0.07 붕괴시키는 도박이었음(예측을 실측 32%인데 47~50%로 상향). 모델 자체(GBM⊕MLP)의 원본 예측은 잘 캘리브레이션돼 있었고, CatBoost 추가·교체는 이득 없음(Δ≈0).
 
-**최종 제출 후보(챔피언)**: **`submission_v7.csv`** (LB 실측 0.63497, 139위 — DACON 제출선택은 v7로). v8은 실패 기록으로 보존.
+**현재 챔피언**: **[`submission/ver_12/submission.csv`](submission/ver_12/submission.csv)** (LB 0.63858, 95위). v7 대비 총점 +0.00360, 1-nMAE +0.00217, FiCR +0.00505.
 
-**⚠️ v8 교훈 (2026-07-12)**: FICR-정렬 가중은 2폴드를 모두 통과하고도 LB에서 −0.009. v5와 동일 패턴 — **평균 예측 CF를 실측(~30%)보다 크게 올리는 변경은 미래 연도의 예측 불가 정지·제한에 처벌당한다**. 이후 채택 규율에 **편향 가드(평균 예측 CF ≤ 38%)** 추가.
+**제출 권장 후보**: **[`submission/ver_16/submission.csv`](submission/ver_16/submission.csv)**. 2023 blocked OOF로만 학습한 제한형 gate가 완전히 미래인 2024 그룹3에서 v14 대비 +0.00265를 기록해 전체 환산 +0.00088을 더했다. 1-NMAE·FiCR가 동시에 개선됐고 분기 3/4·월 8/12에서 우위였다. 그룹1/2 제출 열은 Public 검증된 v12와 정확히 동일하다. LB 확인 전까지 챔피언 표기는 v12로 유지한다.
 
-참고: 리더보드 1등 0.669, 상위권 1-NMAE ~0.87 포화 → **순위는 FICR에서 갈린다**. 우리 팀 "짱씅": v5 328위 → v6 212위 → v7 139위 (1,332팀).
+**⚠️ v8 교훈 (2026-07-12)**: FICR-정렬 가중은 2폴드를 모두 통과하고도 LB에서 −0.009. v5와 동일 패턴 — **평균 예측 CF를 실측(~30%)보다 크게 올리는 변경은 미래 연도의 예측 불가 정지·제한에 처벌당한다**. 이후 채택 규율에 **편향 가드(평균 예측 CF ≤ 39.5%)** 추가.
+
+참고: 리더보드 1등 0.669, 상위권 1-NMAE ~0.87 포화 → **순위는 FICR에서 갈린다**. 우리 팀 "짱승": v5 328위 → v6 212위 → v7 139위 → v12 95위.
 
 ## 2. 평가 지표
 
@@ -62,10 +70,10 @@ repo/preprocessed/         # 시간별 wide 테이블 (그룹별 train/test parq
 Python 3.11 + [uv](https://docs.astral.sh/uv/).
 
 ```bash
-uv sync                                    # 의존성 설치 (.venv)
+uv sync --extra notebook                   # 실행 + 노트북 의존성 설치 (.venv)
 # 노트북 실행 (torch를 쓰는 노트북은 --with torch + OMP 가드)
 OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
-  jupyter nbconvert --to notebook --execute --inplace PIPELINE_FINAL.ipynb
+  jupyter nbconvert --to notebook --execute --inplace submission/ver_9/pipeline.ipynb
 ```
 
 ⚠️ **macOS 필수 주의 — torch + LightGBM 세그폴트**: `import torch` 후 `lightgbm.fit()`을 같은 프로세스에서 호출하면 libomp 중복 로드로 segfault(exit 139)가 난다. 해당 노트북들은 첫 셀에서 다음 3종 가드를 건다 (절대 제거 금지):
@@ -73,45 +81,23 @@ OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
 
 ## 5. Repo 구조
 
-### 추적되는 핵심 파일
-| 파일 | 역할 |
-|---|---|
-| **`PIPELINE_FINAL.ipynb`** | **최종(현재 v8) 파이프라인 end-to-end 재현 (유일하게 추적되는 노트북)** |
-| `wind_lib.py` | 로더·물리 파생·파워커브·유효구간 NMAE·spatial v2 조인·lean feature 세트·HMM(기각됨) |
-| `official_metric.py` | 대회 공식 채점 코드 (총점/1-NMAE/FICR) |
-| `scripts/build_spatial_v2.py` | 원본 CSV → spatial_v2 parquet 생성 |
-| `submission_v4~v8.csv` | 제출 이력·후보 (그 외 산출물은 미추적) |
+```text
+wind_lib.py                 # 데이터 로더·물리/공간 feature
+wind_pipeline.py            # v10+ 공용 GBM/MLP 학습 기반(지연 로딩)
+official_metric.py          # 대회 공식 지표
+submission_validation.py    # 제출 스키마·범위 검증 및 atomic 저장
+scripts/build_spatial_v2.py # 원본 NWP → spatial parquet
+submission/
+  registry.json             # 버전별 상태·점수·제출 경로
+  ver_1/ ... ver_16/        # 해당 버전의 CSV·JSON·코드·노트북·리서치
+tests/                       # 지표·데이터 join·제출 구조 회귀 테스트
+```
 
-### 실험 노트북 (로컬 전용, git 미추적 — 실험 이력 기록)
-| 순서 | 노트북 | 내용 | 결론 |
-|---|---|---|---|
-| 1 | `EDA_MAIN.ipynb` | 분포·상관·VIF·파워커브 EDA | 풍속이 지배변수, 트리모델 적합 |
-| 2 | `CORE_FEATURE_EDA.ipynb` | 70→40 feature 축소 실험 | wind_uv 40개로 성능 유지 |
-| 3 | `EDA_SUPPLEMENT.ipynb` | 리드타임·연도 분포이동·무발전 하한·풍향 교란 | 유효구간 지표 정합 확인 |
-| 4 | `MODELING.ipynb` | LightGBM 기준선 + 첫 제출 | pooled가 그룹3에 유효 |
-| 5 | `MODELING_ADVANCED.ipynb` | HistGBM 앙상블·HMM 국면·GRU 잔차 ablation | GRU 명확 기각 |
-| 6 | `MODELING_CV.ipynb` | expanding-window CV로 판정 견고화 | 앙상블 채택, HMM 기각 |
-| 7 | `MODELING_FICR.ipynb` | 공식지표 기반 FICR 후처리 4종 비교 | debias+nudge 채택 |
-| 8 | `FEATURE_REDUCTION.ipynb` | 변수 축소 ablation (86→55) | 축소만으론 손해 |
-| 9 | `MODELING_V2.ipynb` | 격자 공간 feature + 감률 (65개) | **v2 채택** — 두 해 모두 우위 |
-| 10 | `MODELING_MLP.ipynb` | MLP 앙상블 멤버 실험 | 블렌드 채택 (B50) |
-| 11 | `MODELING_MLP_TUNED.ipynb` | MLP random search 20 trial | trial 15, w=0.6 → **v4** |
-| 12 | `MODELING_V3_FINAL.ipynb` | v3 최종 파이프라인 | `submission_v3.csv` |
-| 13 | `MODELING_FILM.ipynb` | FiLM·계층헤드 조건화 실험 | **기각** — concat 유지 |
-| 14 | `MODELING_SEED_ENS.ipynb` / `_FINAL.ipynb` | 시드 5개 앙상블 → 최종 | **v5** = 권장 제출 |
+버전별 상세 파일과 판정은 [`submission/README.md`](submission/README.md)와
+[`submission/registry.json`](submission/registry.json)을 기준으로 한다. 기각된 HMM과 시간
+이웃 feature도 공용 코드에서 제거해 각각 `ver_1`, `ver_8`의 legacy 모듈에 보존했다.
 
-### 문서
-| 파일 | 내용 |
-|---|---|
-| `document/baram2026_project_plan.md` | 초기 기획서 (데이터 현황·단계별 전략) |
-| `document/CONSTRAINTS_주의점.md` | 규칙·누설 체크리스트 (테스트 입력 = NWP only) |
-| `document/PREPROCESSING_VERIFICATION.md` | 전처리 원본 대조 검증 리포트 |
-| `document/research_conditioning_layers_2026-07-08.md` | 조건화 계층(FiLM/AdaLN) 리서치 |
-| `claudedocs/research_nwp_features_2026-07-09.md` | NWP feature 근거 리서치 (격자 ★★★·감률 ★★☆·500hPa 제외) |
-
-실험별 정량 결과는 `*_summary.json`(로컬 전용)에 기록되어 있으며, 핵심 수치는 이 README의 §1·§8 표에 옮겨져 있다.
-
-## 6. 최종 파이프라인 (v8)
+## 6. 현재 파이프라인 (v12 챔피언 + v16 후보)
 
 ```
 feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
@@ -119,19 +105,23 @@ feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
              + 파워커브 pc_pred_cf (isotonic, 학습구간 fit)
              + 격자 공간 mean/std/gradient 8개 + 감률 2개   ← wind_lib.lean_features() + SPATIAL_COLS
 
-학습 가중 = stuck(SCADA 식별 고장·제한 시간 0.5) × FICR-정렬 (1 + 5·y/용량)
+학습 가중 = MLP는 stuck(SCADA 식별 고장·제한 시간 0.5)
+           GBM은 공식 평가 제외 행(CF<10%) 가중 0
 
-모델 = 0.3 × GBM(튜닝 LightGBM + HistGBM 평균, MAE 손실, 가중)
-     + 0.7 × MLP(256×3 GELU, 그룹 concat 임베딩, 3그룹 pooled, 가중 L1, 시드 10 평균, MPS)
+v12 = 0.4 × GBM(LightGBM + HistGBM) + 0.6 × pooled MLP(시드 3)
+      + 조건부 quantile 기반 공식 기대효용 action
 
-후처리(그룹별, 학습기간 OOF로만 fit) = 보수적 nudge(scale≤1.05·shift≤2%) → [0, 설비용량] 클리핑
+v16 = 그룹1/2는 v12 바이트 그대로 유지
+      그룹3은 pooled LightGBM과 pooled MLP를 날씨별 constrained gate로 결합
+
+후처리 = 두 연도 모두 손해 없는 보수적 nudge + 평균 CF 39.5% guard
 ```
 
 ## 7. 검증 규율 & 누설 방지
 
 - **랜덤 분할 금지** (강한 계절성). expanding-window CV: 그룹1/2 = [2022→2023, 2022-23→2024], 그룹3 = [2023→2024]
 - 기법 채택 기준: **2023·2024 두 폴드 모두 우위**일 때만 (단일 holdout의 노이즈 차단)
-- 파워커브·HMM·debias·nudge·MLP 표준화 — 전부 **해당 폴드 학습구간에서만 fit**
+- 파워커브·nudge·MLP 표준화 — 전부 **해당 폴드 학습구간에서만 fit**
 - 테스트 입력은 NWP뿐. SCADA·재분석·사후보정 금지. 상세: [`document/CONSTRAINTS_주의점.md`](document/CONSTRAINTS_주의점.md)
 
 ## 8. 실험 이력 — 채택/기각과 근거
@@ -144,13 +134,22 @@ feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
 | MLP 블렌드 | ✅ 채택 | 20 trial 중 17개가 두 해 모두 GBM 우위 |
 | FICR 후처리 — 기존(debias+nudge≤1.15, 2024만 검증) | ❌ **실전 실패** | LB에서 FICR −0.053. 2023 폴드 −0.07 붕괴 확인 → v6에서 교체 |
 | FICR 후처리 — **보수적 nudge(P3c, ≤1.05)** | ✅ 채택(v6) | 2023·2024 두 해 모두 우위, worst-year 최강. **LB 실측 +0.017 회복(0.612→0.629)** |
-| 구간별 nudge / quantile FICR-지향 점추정 | ❌ 기각 | 연도 부호 뒤집힘 / 두 해 모두 악화 — 후처리 레버 소진 확인 |
-| **SCADA 라벨 정제** (stuck 시간 가중 0.5) | ✅ 채택(v7) | 두 폴드 +0.008~0.011 — 전 변형이 두 해 모두 우위(`scada_clean_result.json`). g1/g2의 18%가 stuck |
-| **GBM 하이퍼파라미터 튜닝** (lr0.021·트리2000·mcs300) | ✅ 채택(v7) | 두 폴드 +0.003~0.004 (`gbm_hpo_result.json`) |
+| 구간별 nudge | ❌ 기각 | 연도 부호 뒤집힘 |
+| quantile FICR 점추정(C2) | ❌ **실험 무효** | capacity 중복 나눗셈으로 FiCR 항이 약 21,000배 축소됨. v12에서 수정 재실험 |
+| **SCADA 라벨 정제** (stuck 시간 가중 0.5) | ✅ 채택(v7) | 두 폴드 +0.008~0.011 — 전 변형이 두 해 모두 우위(`submission/ver_7/scada_clean_result.json`). g1/g2의 18%가 stuck |
+| **GBM 하이퍼파라미터 튜닝** (lr0.021·트리2000·mcs300) | ✅ 채택(v7) | 두 폴드 +0.003~0.004 (`submission/ver_7/gbm_hpo_result.json`) |
 | FICR-정렬 손실 가중 (α=5) | ❌ **LB 기각**(v8) | 2폴드 단조 개선했으나 LB −0.009 — 상향 편향의 연도 이전 실패. 편향 가드 신설 계기 |
-| 신경망 bake-off (ResNet-MLP·1D-CNN·혼합) | ❌ 기각 | 6변형 전부 현행 MLP에 패배 (`bakeoff_result.json`) |
-| 시간 이웃 NWP feature (배치 내 lag/lead 12개) | ❌ 기각 | 두 폴드 모두 악화 (`tempfeat_result.json`) |
-| SCADA 임계·가중 미세화 / 블렌드 재스캔 | ❌ 기각 | v7 설정이 평탄 최적점 (`tune2_result.json`) |
+| OOF forecast-combination(v10) | ❌ **LB 무효** | v9 대비 총점 +0.000013. 1-nMAE 이득을 FiCR 하락이 정확히 상쇄 |
+| **10% 유효시간 정렬(v11)** | △ LB 대기 | GBM 저발전 행 가중 0. LightGBM 두 해 단조 개선, 전체 raw 2023 +0.0058·2024 +0.0082 |
+| **수정 기대효용 점추정(v12)** | ✅ **Public 채택** | LB 0.63858(95위). v7 대비 1-nMAE +0.00217·FiCR +0.00505로 두 항 모두 전이 |
+| **압축 공간 feature(IDW/PCA)** | ❌ 기각 | 연도 안전 조건 실패. 그룹1/2는 연도별 부호가 뒤집히거나 악화, 그룹3도 pooled보다 약함 (`submission/ver_13/spatial_backtest.json`) |
+| **그룹3 pooled LightGBM(v13)** | ✅ **제출 후보** | 6/6 순차 분기 개선(평균 +0.01423), 2024 월 9/12 개선. 최종 v12 결합 후 전체 +0.00089, 1-nMAE·FiCR 동시 개선 |
+| **그룹3 HistGBM 제거(v14)** | ✅ **새 제출 후보** | pooled-only GBM이 순차 분기 5/6·월 10/12 개선. 최종 v12 대비 +0.00239, v13 대비 +0.00150 |
+| 그룹3 MLP 60%→50%(v15) | ❌ 기각 | 점예측 검증은 통과했지만 기대효용 후 v14 대비 +0.000004뿐. 1-nMAE 이득을 FiCR 하락이 상쇄 |
+| **그룹3 제한형 gating(v16)** | ✅ **새 제출 후보** | 2023 OOF 학습→2024 완전 홀드아웃. 그룹3 +0.00265, 전체 환산 +0.00088, 1-nMAE·FiCR 동시 개선 |
+| 신경망 bake-off (ResNet-MLP·1D-CNN·혼합) | ❌ 기각 | 6변형 전부 현행 MLP에 패배 (`submission/ver_8/bakeoff_result.json`) |
+| 시간 이웃 NWP feature (배치 내 lag/lead 12개) | ❌ 기각 | 두 폴드 모두 악화 (`submission/ver_8/tempfeat_result.json`) |
+| SCADA 임계·가중 미세화 / 블렌드 재스캔 | ❌ 기각 | v7 설정이 평탄 최적점 (`submission/ver_7/tune2_result.json`) |
 | MLP 재튜닝(α 가중 하) | ❌ 기각 | 12 trial 전패 — 현행 설정 유지 |
 | CatBoost 추가/교체 | ❌ 기각 | 두 해 모두 Δ≈0 — GBM 계열 내 교체는 무효 |
 | 시드 앙상블 | ✅ 채택(v5) | 단일시드 CV는 시드운 포함 낙관치 — 앙상블이 실전 기대값 우위 |
@@ -160,25 +159,50 @@ feature 65개 = 원 NWP lean(트리무의미·죽은변수·중복 31개 제거)
 | FiLM / 계층 헤드 조건화 | ❌ 기각 | 두 해 모두 concat 임베딩에 패배 |
 | MOS(NWP 보정) | ❌ 미사용 | 규칙 해석 리스크 + GBM이 흡수 (팀 결정, CONSTRAINTS §3) |
 
-(각 판정의 상세 수치는 로컬 `*_summary.json`·실험 노트북에 기록)
+(각 판정의 상세 수치와 노트북은 해당 `submission/ver_{num}` 폴더에 기록)
 
 > 교훈: 이 데이터 규모(그룹당 1.7~2.6만 행)에서는 **단순한 것(물리 feature·격자 통계·소형 MLP·후처리)이 이기고, 구조적 복잡성(GRU·FiLM·attention류)은 일관되게 진다.**
 
 ## 9. 재현 순서
 
 ```bash
-# 1. 대회 원본을 ~/Downloads/open 에 배치 (또는 scripts/build_spatial_v2.py의 RAW 경로 수정)
+# 1. 대회 원본을 ~/Downloads/open 에 배치
+#    다른 위치라면 WIND_RAW_DIR=/path/to/open 설정
 # 2. 의존성
-uv sync
+uv sync --extra notebook
 # 3. (spatial parquet 재생성이 필요할 때만)
 uv run python scripts/build_spatial_v2.py
-# 4. 최종 제출 재현 → submission_v5.csv
+# 4. v9 제출 재현 → submission/ver_9/submission.csv
 OMP_NUM_THREADS=1 uv run --with nbconvert --with ipykernel --with torch \
-  jupyter nbconvert --to notebook --execute --inplace PIPELINE_FINAL.ipynb
+  jupyter nbconvert --to notebook --execute --inplace submission/ver_9/pipeline.ipynb
+
+# 5. v10 이력 재현 → submission/ver_10/submission.csv
+uv run python -m submission.ver_10.pipeline
+
+# 6. v11 anchor 생성 → submission/ver_11/submission.csv
+uv run python -m submission.ver_11.pipeline
+
+# 7. v12 챔피언 생성 → submission/ver_12/submission.csv
+uv run python -m submission.ver_12.pipeline
+
+# 8. v13 후보 검증 및 생성
+uv run python -m submission.ver_13.backtest
+uv run python -m submission.ver_13.pipeline
+
+# 9. v14 후보 검증 및 생성
+uv run python -m submission.ver_14.backtest
+uv run python -m submission.ver_14.pipeline
+
+# 10. v16 제한형 gate 검증 및 생성 → submission/ver_16/submission.csv
+uv run python -m submission.ver_16.backtest
+uv run python -m submission.ver_16.pipeline
+
+# 11. 구조·지표·제출물 회귀 테스트
+uv run python -m unittest discover -s tests -v
 ```
 
 ## 10. 남은 작업
 
-1. **실제 리더보드 제출** (v5 → v4 순) — 홀드아웃(≈0.646) 대비 실전 편차 캘리브레이션이 이후 모든 개선의 기준
-2. FICR 후처리 세분화 — 출력구간별 nudge (FICR이 발전량 가중이므로 고출력 구간 집중)
-3. group3 개선 — FICR 최약체(0.33대), pooled 재검토·전용 보정
+1. v12를 Public 챔피언으로 유지한 채 v16을 제출하고 실제 LB 전이를 확인
+2. action strength/nudge의 선택 점수와 최종 점수를 분리하는 strict/nested 검증 추가
+3. 문서상 SCADA 파워커브와 현행 NWP→KPX isotonic feature의 불일치 검증

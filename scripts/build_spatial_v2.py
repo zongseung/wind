@@ -1,6 +1,6 @@
 """전처리 v2 보강 feature 생성 — 원본(open/)에서 공간·안정도 feature.
 
-리서치 근거 (claudedocs/research_nwp_features_2026-07-09.md):
+리서치 근거 (submission/ver_2/research_nwp_features_2026-07-09.md):
 - 다중 격자 공간 feature: Andrade & Bessa 2017, 풍력 MAE -12.85% (★★★)
 - 기온 감률(안정도): 물리·자원평가 근거 (★★☆) — t850-t700, t2m-t850 2개만
 
@@ -9,12 +9,12 @@
 
 누설 안전: 원본은 전일 13:00 공개 예보만 포함(검증 완료, PREPROCESSING_VERIFICATION.md).
 """
+import argparse
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-RAW = Path("/Users/ijongseung/Downloads/open")
-OUT = Path(__file__).resolve().parent.parent / "preprocessed"
+from wind_paths import preprocessed_dir, raw_data_dir
 
 
 def gfs_features(path):
@@ -55,18 +55,32 @@ def ldaps_features(path):
     return out
 
 
-def build(split):
-    g = gfs_features(RAW / split / f"gfs_{split}.csv")
-    l = ldaps_features(RAW / split / f"ldaps_{split}.csv")
+def build(split, raw=None, out_dir=None):
+    raw = Path(raw) if raw is not None else raw_data_dir()
+    out_dir = Path(out_dir) if out_dir is not None else preprocessed_dir()
+    g = gfs_features(raw / split / f"gfs_{split}.csv")
+    l = ldaps_features(raw / split / f"ldaps_{split}.csv")
     out = g.join(l, how="inner").reset_index().rename(columns={"forecast_kst_dtm": "kst_dtm"})
-    assert out.notna().all().all(), f"{split}: NaN 존재"
-    path = OUT / f"spatial_v2_{split}.parquet"
+    if not out["kst_dtm"].is_unique:
+        raise ValueError(f"{split}: duplicate timestamps")
+    if not out.notna().all().all():
+        raise ValueError(f"{split}: missing values")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"spatial_v2_{split}.parquet"
     out.to_parquet(path, index=False)
     print(f"{split}: {out.shape} -> {path}")
     print(out.describe().loc[["mean", "std", "min", "max"]].round(3).to_string())
     return out
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--raw-dir", type=Path, default=raw_data_dir())
+    parser.add_argument("--out-dir", type=Path, default=preprocessed_dir())
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    build("train")
-    build("test")
+    args = parse_args()
+    build("train", args.raw_dir, args.out_dir)
+    build("test", args.raw_dir, args.out_dir)

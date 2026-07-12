@@ -1,6 +1,6 @@
 # preprocessed/ 검증 리포트 — 원본(open/) 대조
 
-검증일: 2026-07-09 · 원본: `/Users/ijongseung/Downloads/open` · 대상: `preprocessed/*.parquet`
+검증일: 2026-07-09 · 원본: `$WIND_RAW_DIR` (기본 `~/Downloads/open`) · 대상: `preprocessed/*.parquet`
 
 ## 결론 한 줄
 **누설 없음·값 정확 (모든 항목 오차 0)** — 단, 격자와 변수를 상당히 버린 "최소" 전처리라서 개선 여지가 큼.

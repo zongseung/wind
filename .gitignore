@@ -12,15 +12,15 @@ wheels/
 # Tool caches
 .uv-cache/
 
-# 실험 노트북·산출물은 로컬 전용 (최종 파이프라인·최종 제출만 추적)
+# 루트의 임시 실험 산출물은 로컬 전용. 버전 폴더는 추적한다.
 *.ipynb
-!PIPELINE_FINAL.ipynb
+!submission/**/*.ipynb
 submission_*.csv
-!submission_v4.csv
-!submission_v5.csv
-!submission_v6.csv
-!submission_v7.csv
-!submission_v8.csv
-!submission_v9.csv
+!submission/**/*.csv
 *_summary.json
+!submission/**/*.json
 catboost_info/
+
+# 대회 원본 데이터는 저장소 밖에서 관리
+open/
+data/raw/

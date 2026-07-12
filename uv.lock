@@ -1974,32 +1974,41 @@ name = "wind"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "hmmlearn" },
-    { name = "ipykernel" },
     { name = "lightgbm" },
-    { name = "matplotlib" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "polars" },
+    { name = "pandas" },
     { name = "pyarrow" },
     { name = "scikit-learn" },
+    { name = "torch" },
+]
+
+[package.optional-dependencies]
+legacy = [
+    { name = "hmmlearn" },
+]
+notebook = [
+    { name = "ipykernel" },
+    { name = "matplotlib" },
+    { name = "polars" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "statsmodels" },
-    { name = "torch" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "hmmlearn", specifier = ">=0.3.3" },
-    { name = "ipykernel", specifier = ">=7.3.0" },
+    { name = "hmmlearn", marker = "extra == 'legacy'", specifier = ">=0.3.3" },
+    { name = "ipykernel", marker = "extra == 'notebook'", specifier = ">=7.3.0" },
     { name = "lightgbm", specifier = ">=4.5.0" },
-    { name = "matplotlib", specifier = ">=3.11.0" },
+    { name = "matplotlib", marker = "extra == 'notebook'", specifier = ">=3.11.0" },
     { name = "numpy", specifier = ">=2.4.6" },
-    { name = "polars", specifier = ">=1.42.1" },
+    { name = "pandas", specifier = ">=2.2.0" },
+    { name = "polars", marker = "extra == 'notebook'", specifier = ">=1.42.1" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "scikit-learn", specifier = ">=1.9.0" },
-    { name = "scipy", specifier = ">=1.17.1" },
-    { name = "statsmodels", specifier = ">=0.14.6" },
+    { name = "scipy", marker = "extra == 'notebook'", specifier = ">=1.17.1" },
+    { name = "statsmodels", marker = "extra == 'notebook'", specifier = ">=0.14.6" },
     { name = "torch", specifier = ">=2.12.1" },
 ]
+provides-extras = ["notebook", "legacy"]

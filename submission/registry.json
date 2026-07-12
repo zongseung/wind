@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "updated": "2026-07-12",
+  "versions": [
+    {
+      "version": 1,
+      "status": "history",
+      "local_score": 0.6008,
+      "submission": "submission/ver_1/submission_baseline.csv",
+      "decision": "GBM baseline"
+    },
+    {
+      "version": 2,
+      "status": "history",
+      "local_score": 0.6266,
+      "submission": "submission/ver_2/submission.csv",
+      "decision": "adopt spatial features and FICR post-processing"
+    },
+    {
+      "version": 3,
+      "status": "history",
+      "local_score": 0.6383,
+      "submission": "submission/ver_3/submission.csv",
+      "decision": "adopt GBM and MLP blend"
+    },
+    {
+      "version": 4,
+      "status": "history",
+      "local_score": 0.6463,
+      "submission": "submission/ver_4/submission.csv",
+      "decision": "adopt tuned MLP"
+    },
+    {
+      "version": 5,
+      "status": "rejected",
+      "local_score": 0.6461,
+      "leaderboard_score": 0.61206,
+      "submission": "submission/ver_5/submission.csv",
+      "decision": "reject year-fragile post-processing"
+    },
+    {
+      "version": 6,
+      "status": "history",
+      "local_score": 0.6273,
+      "leaderboard_score": 0.6292,
+      "submission": "submission/ver_6/submission.csv",
+      "decision": "adopt conservative nudge"
+    },
+    {
+      "version": 7,
+      "status": "history",
+      "local_score": 0.6351,
+      "leaderboard_score": 0.634976,
+      "submission": "submission/ver_7/submission.csv",
+      "decision": "adopt SCADA cleaning and tuned GBM"
+    },
+    {
+      "version": 8,
+      "status": "rejected",
+      "local_score": 0.6438,
+      "leaderboard_score": 0.626139,
+      "submission": "submission/ver_8/submission.csv",
+      "decision": "reject FICR-aligned loss weighting"
+    },
+    {
+      "version": 9,
+      "status": "history",
+      "local_score": 0.6364,
+      "leaderboard_score": 0.631568,
+      "submission": "submission/ver_9/submission.csv",
+      "decision": "10-seed expansion did not transfer"
+    },
+    {
+      "version": 10,
+      "status": "rejected",
+      "local_score": 0.637,
+      "leaderboard_score": 0.631581,
+      "submission": "submission/ver_10/submission.csv",
+      "decision": "forecast combination had no leaderboard gain"
+    },
+    {
+      "version": 11,
+      "status": "intermediate",
+      "local_score": 0.6395,
+      "submission": "submission/ver_11/submission.csv",
+      "decision": "metric-aligned anchor used by v12"
+    },
+    {
+      "version": 12,
+      "status": "champion",
+      "local_score": 0.641,
+      "leaderboard_score": 0.63858,
+      "submission": "submission/ver_12/submission.csv",
+      "decision": "public-validated expected-utility champion"
+    },
+    {
+      "version": 13,
+      "status": "history",
+      "local_score": 0.6418,
+      "submission": "submission/ver_13/submission.csv",
+      "decision": "pooled group-3 LightGBM candidate"
+    },
+    {
+      "version": 14,
+      "status": "candidate_history",
+      "local_score": 0.6433,
+      "submission": "submission/ver_14/submission.csv",
+      "decision": "remove group-3 HistGBM branch"
+    },
+    {
+      "version": 15,
+      "status": "rejected",
+      "submission": null,
+      "decision": "50:50 group-3 blend had negligible final utility gain"
+    },
+    {
+      "version": 16,
+      "status": "candidate",
+      "local_score": 0.6442,
+      "submission": "submission/ver_16/submission.csv",
+      "decision": "submit constrained group-3 gate for leaderboard validation"
+    }
+  ]
+}

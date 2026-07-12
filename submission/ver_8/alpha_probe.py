@@ -6,6 +6,7 @@ import os
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 import warnings; warnings.filterwarnings("ignore")
 import json
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
@@ -15,6 +16,7 @@ import lightgbm as lgb
 from sklearn.ensemble import HistGradientBoostingRegressor as HGB
 import wind_lib as W
 from official_metric import group_scores
+from wind_paths import raw_data_dir
 
 DEV = "mps" if torch.backends.mps.is_available() else "cpu"
 SEEDS = [15, 0, 1]; BLEND = 0.7; STUCK_TH = 0.3; STUCK_W = 0.5
@@ -22,7 +24,8 @@ MLP_CFG = dict(h=256, depth=3, drop=0.0, lr=0.0015868563457489381, wd=1e-4, bs=2
 GBM_PARAMS = dict(objective="mae", n_estimators=2000, learning_rate=0.020651822836313095,
     num_leaves=63, min_child_samples=300, subsample=0.8, subsample_freq=1, colsample_bytree=0.5,
     reg_lambda=0.1, random_state=42, n_jobs=1, verbose=-1)
-RAW = "/Users/ijongseung/Downloads/open"
+RAW = str(raw_data_dir())
+VERSION_DIR = Path(__file__).resolve().parent
 GROUPS = (1, 2, 3)
 
 FR, TGT = {}, {}
@@ -156,18 +159,25 @@ def run_alpha(alpha):
     return out
 
 
-REF2 = {2023: 0.6173, 2024: 0.6241}   # α=2 (FICR_WEIGHT_TUNE 실측)
-res = {2.0: REF2}
-for a in [3.0, 5.0]:
+REF2 = {2023: 0.6193, 2024: 0.6327}   # α=5 (alpha_ext 실측)
+res = {5.0: REF2}
+for a in [8.0]:
     res[a] = run_alpha(a)
     print(f"α={a}: 2023={res[a][2023]:.4f}  2024={res[a][2024]:.4f}", flush=True)
 
-best = 2.0
-for a in [3.0, 5.0]:
+best = 5.0
+for a in [8.0]:
     if res[a][2023] >= res[best][2023] and res[a][2024] >= res[best][2024]:
         best = a
 print(f"최종 α = {best}")
-json.dump(dict(final_alpha=best,
-               scan={str(a): {str(k): round(v, 4) for k, v in r.items()} for a, r in res.items()}),
-          open("final_alpha.json", "w"), ensure_ascii=False, indent=2)
-print("saved final_alpha.json")
+with (VERSION_DIR / "final_alpha.json").open("w") as output:
+    json.dump(
+        dict(
+            final_alpha=best,
+            scan={str(a): {str(k): round(v, 4) for k, v in r.items()} for a, r in res.items()},
+        ),
+        output,
+        ensure_ascii=False,
+        indent=2,
+    )
+print(f"saved {VERSION_DIR / 'final_alpha.json'}")

@@ -2,7 +2,7 @@
 
 누설 방지 원칙(문서 CONSTRAINTS §0):
 - 테스트 예측 = 테스트 NWP 입력 + 학습구간에서 배운 파라미터의 함수.
-- 파워커브/HMM/모델은 모두 학습구간에서만 fit → 검증/테스트 NWP에 적용.
+- 파워커브/모델은 모두 학습구간에서만 fit → 검증/테스트 NWP에 적용.
 - 실측 발전량·SCADA는 타깃/파워커브/라벨정제 외 용도로 절대 미사용.
 """
 from pathlib import Path
@@ -11,21 +11,22 @@ import pandas as pd
 from sklearn.isotonic import IsotonicRegression
 from sklearn.metrics import mean_absolute_error
 
+from wind_paths import preprocessed_dir
+
 CAP = {1: 21600, 2: 21600, 3: 21000}          # 시간당 설비용량 kWh
 VALID_START = pd.Timestamp("2024-01-01")
 VALID_END = pd.Timestamp("2025-01-01")         # 학습라벨 끝 (2025 경계행 배제)
 VALID_CF = 0.10                                # 대회 채점: 실측 CF >= 10%
 EPS = 1e-6
 
-_CAND = [Path("preprocessed"), Path("/root/wind/preprocessed"),
-         Path(__file__).resolve().parent / "preprocessed"]
-
-
 def data_dir() -> Path:
-    for p in _CAND:
-        if p.exists():
-            return p
-    raise FileNotFoundError(f"preprocessed not found; tried {_CAND}")
+    path = preprocessed_dir()
+    if path.exists():
+        return path
+    raise FileNotFoundError(
+        f"preprocessed directory not found: {path}. "
+        "Set WIND_PREPROCESSED_DIR to override it."
+    )
 
 
 def load_train(g, data=None):
@@ -35,12 +36,19 @@ def load_train(g, data=None):
     df[tgt] = pd.to_numeric(df[tgt], errors="coerce")
     df = df.dropna(subset=[tgt]).copy()
     df = df[df.kst_dtm < VALID_END]
-    return df.sort_values("kst_dtm").reset_index(drop=True), tgt
+    df = df.sort_values("kst_dtm").reset_index(drop=True)
+    if not df["kst_dtm"].is_unique:
+        raise ValueError(f"group {g} train timestamps are not unique")
+    return df, tgt
 
 
 def load_test(g, data=None):
     data = data or data_dir()
-    return pd.read_parquet(data / f"test_kpx_group_{g}.parquet").sort_values("kst_dtm").reset_index(drop=True)
+    df = pd.read_parquet(data / f"test_kpx_group_{g}.parquet")
+    df = df.sort_values("kst_dtm").reset_index(drop=True)
+    if not df["kst_dtm"].is_unique:
+        raise ValueError(f"group {g} test timestamps are not unique")
+    return df
 
 
 def strip(df, g):
@@ -106,7 +114,7 @@ def nmae_valid(y_true, y_pred, cap):
 
 
 # ── v2: 공간·안정도 feature (scripts/build_spatial_v2.py 산출) ──────────────
-# 근거: claudedocs/research_nwp_features_2026-07-09.md (다중격자 ★★★, 감률 ★★☆)
+# 근거: submission/ver_2/research_nwp_features_2026-07-09.md
 SPATIAL_COLS = ["gfs_ws100_grid_mean", "gfs_ws100_grid_std", "gfs_ws100_grad_ew",
                 "gfs_ws100_grad_ns", "gfs_lapse_850_700", "gfs_inversion_2m_850",
                 "ldaps_ws10_grid_mean", "ldaps_ws10_grid_std", "ldaps_ws10_grad_ew",
@@ -138,8 +146,15 @@ def load_spatial(split, data=None):
 def add_spatial(fr, split, data=None):
     """build() 결과에 v2 feature 조인."""
     sp = load_spatial(split, data)
-    out = fr.merge(sp, on="kst_dtm", how="left")
-    assert out[SPATIAL_COLS].notna().all().all(), "spatial join NaN"
+    if not fr["kst_dtm"].is_unique:
+        raise ValueError("base frame contains duplicate timestamps")
+    if not sp["kst_dtm"].is_unique:
+        raise ValueError(f"spatial {split} frame contains duplicate timestamps")
+    out = fr.merge(sp, on="kst_dtm", how="left", validate="one_to_one")
+    if len(out) != len(fr):
+        raise ValueError("spatial join changed the row count")
+    if not out[SPATIAL_COLS].notna().all().all():
+        raise ValueError("spatial join produced missing feature values")
     return out
 
 
@@ -150,62 +165,3 @@ def lean_features(cols, include_pc=True):
     if include_pc and "pc_pred_cf" not in out:
         out.append("pc_pred_cf")
     return out
-
-
-# ── v9: 시간 이웃 NWP feature (같은 예보 배치 내 lag/lead — 누설·타이밍 안전) ──
-# 배치 = 전일 13시 공개된 01:00~24:00 24시간. 배치 경계를 넘는 lead는 미래 배치
-# (더 늦게 공개) 참조라 금지 → 경계에서는 자기값으로 채움.
-TEMPORAL_BASE = ["gfs_wind_speed_100m_mean", "ldaps_wind_speed_10m_mean"]
-TEMPORAL_COLS = [
-    "tmp_gfs_lag1", "tmp_gfs_lead1", "tmp_gfs_lag3", "tmp_gfs_lead3",
-    "tmp_gfs_bmean", "tmp_gfs_bstd", "tmp_gfs_anom", "tmp_gfs_trend",
-    "tmp_ldaps_lag1", "tmp_ldaps_lead1", "tmp_ldaps_bmean", "tmp_ldaps_anom"]
-
-
-def add_temporal(fr):
-    """같은 예보 배치 내 시간 이웃 feature. NWP 타이밍 오차(전선 지연 등) 평활·추세."""
-    fr = fr.sort_values("kst_dtm").reset_index(drop=True).copy()
-    batch = (fr["kst_dtm"] - pd.Timedelta(hours=1)).dt.floor("D")
-    for c, pre in [(TEMPORAL_BASE[0], "gfs"), (TEMPORAL_BASE[1], "ldaps")]:
-        g = fr.groupby(batch)[c]
-        fr[f"tmp_{pre}_lag1"] = g.shift(1).fillna(fr[c])
-        fr[f"tmp_{pre}_lead1"] = g.shift(-1).fillna(fr[c])
-        if pre == "gfs":
-            fr[f"tmp_{pre}_lag3"] = g.shift(3).fillna(fr[c])
-            fr[f"tmp_{pre}_lead3"] = g.shift(-3).fillna(fr[c])
-        bm = g.transform("mean")
-        fr[f"tmp_{pre}_bmean"] = bm
-        if pre == "gfs":
-            fr[f"tmp_{pre}_bstd"] = g.transform("std").fillna(0.0)
-        fr[f"tmp_{pre}_anom"] = fr[c] - bm
-        if pre == "gfs":
-            fr[f"tmp_{pre}_trend"] = fr[f"tmp_{pre}_lead1"] - fr[f"tmp_{pre}_lag1"]
-    assert fr[TEMPORAL_COLS].notna().all().all()
-    return fr
-
-
-# ── NWP-only HMM 국면(regime) ─────────────────────────────────────────────
-# 규칙(research 문서 §0): regime은 반드시 NWP 파생 변수로만 정의. 실측 발전량 사용 금지.
-REGIME_VARS = ["hub_v", "shear_gfs", "alpha_gfs", "gust_ratio", "air_density",
-               "gfs_ldaps_diff", "gfs_wind_speed_850hpa_mean"]
-
-
-def fit_regime_hmm(fr_train, n_states=4, seed=42, cols=None):
-    """학습구간 NWP만으로 Gaussian HMM 적합. (scaler, hmm, cols) 반환."""
-    from hmmlearn.hmm import GaussianHMM
-    cols = cols or REGIME_VARS
-    X = fr_train[cols].to_numpy()
-    mu = X.mean(0); sd = X.std(0) + EPS
-    Xs = (X - mu) / sd
-    hmm = GaussianHMM(n_components=n_states, covariance_type="diag",
-                      n_iter=200, random_state=seed, tol=1e-3)
-    hmm.fit(Xs)
-    return (mu, sd, cols), hmm
-
-
-def regime_posteriors(fr, scaler, hmm):
-    """soft posterior(감마) K열 반환. 하드 argmax 금지(research §3)."""
-    mu, sd, cols = scaler
-    Xs = (fr[cols].to_numpy() - mu) / sd
-    post = hmm.predict_proba(Xs)
-    return pd.DataFrame(post, columns=[f"regime_{k}" for k in range(post.shape[1])], index=fr.index)
